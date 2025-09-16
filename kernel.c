@@ -1,4 +1,5 @@
 #include "keyboard_map.h"
+#include "lista_palavras.h"
 
 #define LINES 25
 #define COLUMNS_IN_LINE 80
@@ -91,6 +92,13 @@ void printa(const char *str) {
     }
 }
 
+void escolhe_palavra(int segundo) {
+    int indice = segundo % TOTAL_PALAVRAS;
+    for (int i = 0; i < TAMANHO_PALAVRA; i++) {
+        palavra_secreta[i] = lista_palavras[indice][i];
+    }
+    palavra_secreta[TAMANHO_PALAVRA] = '\0';
+}
 
 void scroll_tela(void) {
     unsigned int line_size = BYTES_FOR_EACH_ELEMENT * COLUMNS_IN_LINE;
@@ -135,14 +143,6 @@ void limpa_tela(void) {
     current_loc = 0;
 }
 
-/* === Funções de string === */
-int strncmp(const char *s1, const char *s2, int n) {
-    for (int i = 0; i < n; i++) {
-        if (s1[i] != s2[i]) return s1[i] - s2[i];
-    }
-    return 0;
-}
-
 /* Processa a palavra */
 void verifica_entrada(void) {
 
@@ -168,8 +168,6 @@ void verifica_entrada(void) {
         printa_novaLinha();
     }
 }
-
-
 
 void keyboard_handler_main(void)
 {
@@ -209,6 +207,8 @@ void keyboard_handler_main(void)
 /* Verifica se a palavra está certa */
 void verifica_palavra() {
     int i, j;
+    int iguais = 1;
+
     for (i = 0; i < TAMANHO_PALAVRA; i++) {
 
         // Converte a letra atual em string
@@ -217,22 +217,21 @@ void verifica_palavra() {
         // Para cada letra, verifica se está na posição correta
         if (tentativa[i] == palavra_secreta[i]) {
             printa_comCor(str, 0x0A);   // Printa em verde
-        } else { // Se estiver na posição incorreta
+        } else { 
+            iguais = 0;
             int found = 0;
 
             // Passa por todas as letras da palavra secreta
             for (j = 0; j < TAMANHO_PALAVRA; j++) {
-                // Incrementa found se a letra estiver na palavra
                 if (tentativa[i] == palavra_secreta[j]) {
                     found = 1;
                     break;
                 }
             }
 
-            // Se a letra foi encontrada na palavra secreta
             if (found) {
                 printa_comCor(str, 0x0E); // Printa em amarelo
-            } else { // Se a letra não foi encontrada na palavra secreta
+            } else {
                 printa_comCor(str, 0x07); // Printa em cinza normal
             }
         }
@@ -241,19 +240,14 @@ void verifica_palavra() {
     printa_novaLinha();
 
     // Verifica se a tentativa está correta
-    if (strncmp(tentativa, palavra_secreta, TAMANHO_PALAVRA) == 0) {
-        // Da os parabens e termina o jogo
+    if (iguais) {
         printa_novaLinha();
         printa_comCor("Parabens! Voce acertou!", 0x0A);
         game_over = 1;
     } else {
-        // Incrementa o numero de tentativas
         tentativas_done++;
 
-        // Verifica se o jogador perdeu
         if (tentativas_done >= MAX_TENTATIVAS) {
-
-            // Informa a derrota e termina o jogo
             printa_novaLinha();
             printa_comCor("Game Over! A palavra era: ", 0x0C);
             printa_comCor(palavra_secreta, 0x0C);
@@ -261,8 +255,17 @@ void verifica_palavra() {
         }
     }
 
-    // Reseta a tentativa
     tentativa_pos = 0;
+}
+
+// Função para ler um registrador do RTC
+unsigned char read_rtc_register(int reg) {
+    write_port(0x70, reg);
+    return read_port(0x71);
+}
+
+int pega_segundo() {
+    return read_rtc_register(0x00); // 0x00 = segundos
 }
 
 
@@ -271,8 +274,10 @@ void kmain(void)
 {
     limpa_tela(); // Limpa a tela
 
+    escolhe_palavra(pega_segundo());
+
     // Introdução do jogo
-    printa("Bem-vindo ao TERMO do Kernel!");
+    printa_comCor("Vamos jogar termo?", 0x0D);
     printa_novaLinha();
     printa("Tente adivinhar a palavra de ");
     char str[2] = { '0' + TAMANHO_PALAVRA, '\0' };
