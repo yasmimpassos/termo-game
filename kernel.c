@@ -25,7 +25,7 @@ char *vidptr = (char*)0xb8000;
 #define TAMANHO_PALAVRA 5
 #define MAX_TENTATIVAS 6
 
-char palavra_secreta[TAMANHO_PALAVRA+1] = "casas";
+char palavra_secreta[TAMANHO_PALAVRA+1];
 char tentativa[TAMANHO_PALAVRA+1];
 int tentativa_pos = 0;
 int tentativas_done = 0;
